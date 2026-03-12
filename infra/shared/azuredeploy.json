@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "registryName": {
+      "type": "string",
+      "defaultValue": "pabloregistry",
+      "metadata": {
+        "description": "Globally unique name for the shared Azure Container Registry."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for all resources."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerRegistry/registries",
+      "apiVersion": "2023-07-01",
+      "name": "[parameters('registryName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Basic"
+      },
+      "properties": {
+        "adminUserEnabled": false
+      }
+    }
+  ],
+  "outputs": {
+    "registryLoginServer": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName'))).loginServer]"
+    },
+    "registryId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName'))]"
+    }
+  }
+}
