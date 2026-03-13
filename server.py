@@ -41,9 +41,8 @@ class TokenAuthMiddleware(BaseHTTPMiddleware):
 # --- MCP Server ---
 mcp = FastMCP(
     "Vault Bridge",
-    description="Securely retrieves API keys and secrets from Azure Key Vault.",
+    instructions="Securely retrieves API keys and secrets from Azure Key Vault.",
 )
-mcp._app.add_middleware(TokenAuthMiddleware)
 
 
 @mcp.tool()
@@ -118,3 +117,8 @@ def set_env(name: str, env_var: str | None = None) -> str:
         return f'export {var_name}="{secret.value}"'
     except Exception as e:
         return f"ERROR: Secret '{name}' not found."
+
+
+# --- ASGI app: FastMCP HTTP app + auth middleware ---
+app = mcp.http_app(path="/sse")
+app.add_middleware(TokenAuthMiddleware)

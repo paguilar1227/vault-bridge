@@ -8,4 +8,4 @@ COPY server.py .
 
 EXPOSE 8080
 
-CMD ["fastmcp", "run", "server.py", "--transport", "sse", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8080"]
