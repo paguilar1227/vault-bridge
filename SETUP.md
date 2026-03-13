@@ -65,10 +65,12 @@ The Container App needs an image in ACR before it can start. Push one manually t
 # Log into the registry
 az acr login --name pabloregistry
 
-# Build and push
-docker build -t pabloregistry.azurecr.io/vault-bridge:latest .
+# Build and push (--platform is required on Apple Silicon Macs — Azure Container Apps runs linux/amd64)
+docker build --platform linux/amd64 -t pabloregistry.azurecr.io/vault-bridge:latest .
 docker push pabloregistry.azurecr.io/vault-bridge:latest
 ```
+
+> **Apple Silicon note:** If you skip `--platform linux/amd64`, Docker builds a `linux/arm64` image by default. The push will succeed, but the Container App will fail in Step 4 with: `image OS/Arc must be linux/amd64 but found linux/arm64`.
 
 ## Step 4: Deploy Vault Bridge Infrastructure
 
@@ -88,6 +90,8 @@ az deployment group create \
   --parameters @infra/vault-bridge/azuredeploy.parameters.json \
   --parameters vaultBridgeToken="$BRIDGE_TOKEN"
 ```
+
+> **First-deploy timing issue:** The ARM template creates the Container App and its AcrPull role assignment in parallel. On first deploy, the role assignment may not propagate before the Container App tries to pull the image, causing an `unable to pull image using Managed identity` error. If this happens, just re-run the same `az deployment group create` command — the second attempt succeeds because the role assignment has had time to propagate. The re-run may report `RoleAssignmentExists` as an error, but that's harmless — the Container App will be running.
 
 **What this creates:**
 - `pablo-secrets` — Key Vault (Standard, RBAC-enabled, soft delete on)
@@ -258,7 +262,12 @@ az ad app delete --id <AZURE_CLIENT_ID>
 ## Troubleshooting
 
 **Container App won't start / image pull errors:**
-The managed identity's AcrPull role assignment can take 1-2 minutes to propagate after the ARM deployment. Wait a moment, then restart:
+
+Two common causes:
+
+1. **Wrong architecture (Apple Silicon):** If you built the image on an M-series Mac without `--platform linux/amd64`, the image is `arm64` but Container Apps needs `amd64`. Rebuild with `docker build --platform linux/amd64 ...`, push again, and re-deploy.
+
+2. **AcrPull role not yet propagated:** The managed identity's AcrPull role assignment can take 1-2 minutes to propagate after the ARM deployment. Re-run the same `az deployment group create` command from Step 4, or manually restart the revision:
 ```bash
 az containerapp revision restart \
   --name vault-bridge \

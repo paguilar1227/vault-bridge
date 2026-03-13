@@ -1,8 +1,11 @@
 import os
+import hmac
 import logging
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from azure.keyvault.secrets import SecretClient
 from fastmcp import FastMCP
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("vault-bridge")
@@ -21,12 +24,26 @@ credential = (
 )
 vault_client = SecretClient(vault_url=VAULT_URL, credential=credential)
 
+
+# --- Auth middleware: accepts token via header OR query param ---
+class TokenAuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        token = request.query_params.get("token")
+        if not token:
+            auth = request.headers.get("authorization", "")
+            if auth.startswith("Bearer "):
+                token = auth[7:]
+        if not token or not hmac.compare_digest(token, BEARER_TOKEN):
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+        return await call_next(request)
+
+
 # --- MCP Server ---
 mcp = FastMCP(
     "Vault Bridge",
     description="Securely retrieves API keys and secrets from Azure Key Vault.",
-    auth_token=BEARER_TOKEN,
 )
+mcp._app.add_middleware(TokenAuthMiddleware)
 
 
 @mcp.tool()
