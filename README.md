@@ -12,7 +12,7 @@ A thin [FastMCP](https://github.com/jlowin/fastmcp) server hosted on Azure Conta
 
 1. Reads secrets from Azure Key Vault via Managed Identity (zero stored credentials)
 2. Exposes them to Claude via MCP tools (`get_secret`, `list_secrets`, `set_env`)
-3. Authenticates Claude's connection with a bearer token over HTTPS
+3. Authenticates via token (query param or Authorization header) over HTTPS
 4. Scales to zero when idle — effectively free to run
 
 Since remote MCP servers sync account-wide in Claude, connecting once makes your secrets available on iOS, web, desktop, and CLI automatically.
@@ -28,9 +28,9 @@ Since remote MCP servers sync account-wide in Claude, connecting once makes your
 ## Architecture
 
 ```
-Claude Code (phone/web/cli)
+Claude (phone/web/desktop/cli)
     │
-    │  HTTPS + Bearer Token
+    │  HTTPS + Token (query param or header)
     ▼
 Vault Bridge MCP (Azure Container Apps)
     │
@@ -61,7 +61,7 @@ export ENVIRONMENT="development"  # Uses DefaultAzureCredential (CLI login)
 pip install -r requirements.txt
 
 # Run the server
-fastmcp run server.py --transport sse --host 0.0.0.0 --port 8080
+uvicorn server:app --host 0.0.0.0 --port 8080
 ```
 
 ### Deploy to Azure
@@ -85,17 +85,10 @@ az containerapp identity assign --name vault-bridge --resource-group vault-bridg
 
 ### Connect to Claude
 
-Add as a remote MCP server in Claude settings:
+Add as a custom connector in **Claude Settings → Connectors → Add Custom Connector**:
 
-```json
-{
-  "name": "Vault Bridge",
-  "url": "https://<your-app-url>/sse",
-  "headers": {
-    "Authorization": "Bearer <your-token>"
-  }
-}
-```
+- **Name:** `Vault Bridge`
+- **URL:** `https://<your-app-url>/sse?token=<your-token>`
 
 ## Design Philosophy
 

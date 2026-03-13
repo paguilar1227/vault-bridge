@@ -176,19 +176,14 @@ That's it. The workflow at `.github/workflows/deploy.yml` is already in the repo
 
 ## Step 7: Connect Claude
 
-Add Vault Bridge as a remote MCP server in Claude. Since remote MCP servers sync account-wide, this works on iOS, web, desktop, and CLI automatically.
+Add Vault Bridge as a custom connector in Claude. Since connectors sync account-wide, this works on iOS, web, desktop, and CLI automatically.
 
-In **Claude Settings → Connectors → MCP Servers**, add:
+In **Claude Settings → Connectors → Add Custom Connector**, add:
 
-```json
-{
-  "name": "Vault Bridge",
-  "url": "https://<your-app-fqdn>/sse",
-  "headers": {
-    "Authorization": "Bearer <your-BRIDGE_TOKEN-from-step-4>"
-  }
-}
-```
+- **Name:** `Vault Bridge`
+- **URL:** `https://<your-app-fqdn>/sse?token=<your-BRIDGE_TOKEN-from-step-4>`
+
+Leave the OAuth fields empty — auth is handled via the token in the URL.
 
 ### Verify It Works
 
@@ -237,10 +232,10 @@ az containerapp update \
   --resource-group vault-bridge-rg \
   --set-env-vars VAULT_BRIDGE_TOKEN="$NEW_TOKEN"
 
-echo "Update your Claude MCP config with: $NEW_TOKEN"
+echo "Update your Claude connector URL with: $NEW_TOKEN"
 ```
 
-Then update the `Authorization` header in your Claude MCP server settings.
+Then update the `?token=` parameter in your Claude connector URL.
 
 ---
 

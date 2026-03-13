@@ -10,13 +10,13 @@ This is a FastMCP server that bridges Azure Key Vault to Claude Code via MCP too
 - **Framework:** FastMCP
 - **Secret Backend:** Azure Key Vault (Standard tier)
 - **Auth to Vault:** Azure Managed Identity (production) / DefaultAzureCredential (dev)
-- **Auth from Claude:** Bearer token over HTTPS
+- **Auth from Claude:** Token via query param or Authorization header over HTTPS
 - **Hosting:** Azure Container Apps (Consumption plan, scale-to-zero)
 
 ## Key Files
 
 - `server.py` — The entire MCP server (~100 lines). Three tools: `get_secret`, `list_secrets`, `set_env`
-- `Dockerfile` — Slim Python 3.12 image, runs FastMCP with SSE transport on port 8080
+- `Dockerfile` — Slim Python 3.12 image, runs uvicorn on port 8080
 - `requirements.txt` — fastmcp, azure-identity, azure-keyvault-secrets, uvicorn
 
 ## Design Rules
@@ -39,5 +39,5 @@ export AZURE_VAULT_URL="https://your-vault.vault.azure.net"
 export VAULT_BRIDGE_TOKEN="dev-token"
 export ENVIRONMENT="development"
 pip install -r requirements.txt
-fastmcp run server.py --transport sse --host 0.0.0.0 --port 8080
+uvicorn server:app --host 0.0.0.0 --port 8080
 ```
