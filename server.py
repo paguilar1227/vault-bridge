@@ -46,6 +46,44 @@ mcp = FastMCP(
 
 
 @mcp.tool()
+def help() -> str:
+    """Get help on what Vault Bridge is and how to use it.
+
+    Call this tool to learn about the MCP server's purpose, available tools,
+    and how to add new secrets to the vault.
+    """
+    return """
+# Vault Bridge
+
+An MCP server that provides secure access to API keys and secrets stored in Azure Key Vault.
+
+## Available Tools
+
+- **get_secret(name)** — Retrieve a secret value by name
+- **list_secrets()** — List all secrets with their service/purpose tags (no values)
+- **set_env(name)** — Get an export command to set a secret as an environment variable
+- **help()** — This help text
+
+## Adding a New Secret
+
+Use the Azure CLI:
+
+```
+az keyvault secret set \\
+  --vault-name <your-vault> \\
+  --name <secret-name> \\
+  --value "<secret-value>" \\
+  --tags service="<service-name>" purpose="<comma-separated-purposes>"
+```
+
+**Naming:** lowercase with hyphens (e.g., `stripe-api-key`).
+**Tags:** Always set `service` and `purpose` so `list_secrets()` returns useful context.
+
+The new secret is available immediately — no server restart needed.
+""".strip()
+
+
+@mcp.tool()
 def get_secret(name: str) -> str:
     """Retrieve a secret value by name.
 
