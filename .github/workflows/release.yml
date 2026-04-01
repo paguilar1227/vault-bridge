@@ -2,16 +2,46 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
 
 jobs:
-  notify-gateway:
+  tag-and-notify:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history so all tags are available
+
+      - name: Fetch all tags
+        run: git fetch --tags --force
+
+      - name: Determine next tag
+        id: bump
+        run: |
+          LATEST=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          LATEST=${LATEST:-v0.0.0}
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+
+          # Strip leading 'v', split on '.', bump minor, reset patch
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST#v}"
+          NEXT="v${MAJOR}.$((MINOR + 1)).0"
+          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        run: |
+          git tag "${{ steps.bump.outputs.next }}"
+          git push origin "${{ steps.bump.outputs.next }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Trigger open-toolkit deploy
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.GATEWAY_DISPATCH_TOKEN }}
           repository: paguilar1227/open-toolkit
           event-type: dependency-updated
-          client-payload: '{"package": "vault-bridge", "tag": "${{ github.ref_name }}"}'
+          client-payload: '{"package": "vault-bridge", "tag": "${{ steps.bump.outputs.next }}"}'
