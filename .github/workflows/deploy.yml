@@ -1,12 +1,7 @@
 name: Build and Deploy
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - "**.md"
-      - "agent-workspace/**"
-      - "LICENSE"
+  workflow_dispatch:  # Manual only — gateway handles deploys now
 
 permissions:
   id-token: write

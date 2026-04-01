@@ -7,6 +7,13 @@ from fastmcp import FastMCP
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+from vault_bridge.tools import (
+    vault_get_secret,
+    vault_help,
+    vault_list_secrets,
+    vault_set_env,
+)
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("vault-bridge")
 
@@ -52,35 +59,7 @@ def help() -> str:
     Call this tool to learn about the MCP server's purpose, available tools,
     and how to add new secrets to the vault.
     """
-    return """
-# Vault Bridge
-
-An MCP server that provides secure access to API keys and secrets stored in Azure Key Vault.
-
-## Available Tools
-
-- **get_secret(name)** — Retrieve a secret value by name
-- **list_secrets()** — List all secrets with their service/purpose tags (no values)
-- **set_env(name)** — Get an export command to set a secret as an environment variable
-- **help()** — This help text
-
-## Adding a New Secret
-
-Use the Azure CLI:
-
-```
-az keyvault secret set \\
-  --vault-name <your-vault> \\
-  --name <secret-name> \\
-  --value "<secret-value>" \\
-  --tags service="<service-name>" purpose="<comma-separated-purposes>"
-```
-
-**Naming:** lowercase with hyphens (e.g., `stripe-api-key`).
-**Tags:** Always set `service` and `purpose` so `list_secrets()` returns useful context.
-
-The new secret is available immediately — no server restart needed.
-""".strip()
+    return vault_help()
 
 
 @mcp.tool()
@@ -98,13 +77,7 @@ def get_secret(name: str) -> str:
     Args:
         name: The secret name (lowercase, hyphens). Example: "stripe-api-key"
     """
-    try:
-        secret = vault_client.get_secret(name)
-        logger.info(f"Secret retrieved: {name}")
-        return secret.value
-    except Exception as e:
-        logger.error(f"Failed to retrieve secret '{name}': {e}")
-        return f"ERROR: Secret '{name}' not found. Use list_secrets() to see available names."
+    return vault_get_secret(name, vault_client=vault_client)
 
 
 @mcp.tool()
@@ -115,22 +88,7 @@ def list_secrets() -> list[dict]:
     Use this to discover what credentials are available before calling
     get_secret() or set_env().
     """
-    try:
-        secrets = vault_client.list_properties_of_secrets()
-        result = []
-        for s in secrets:
-            if not s.enabled:
-                continue
-            entry = {"name": s.name}
-            if s.tags:
-                entry["service"] = s.tags.get("service", "")
-                entry["purpose"] = s.tags.get("purpose", "")
-            result.append(entry)
-        logger.info(f"Listed {len(result)} secrets")
-        return sorted(result, key=lambda x: x["name"])
-    except Exception as e:
-        logger.error(f"Failed to list secrets: {e}")
-        return [{"error": str(e)}]
+    return vault_list_secrets(vault_client=vault_client)
 
 
 @mcp.tool()
@@ -148,13 +106,7 @@ def set_env(name: str, env_var: str | None = None) -> str:
                  name with hyphens converted to underscores.
                  Example: "stripe-api-key" becomes "STRIPE_API_KEY"
     """
-    try:
-        secret = vault_client.get_secret(name)
-        var_name = env_var or name.upper().replace("-", "_")
-        # Return the command for Claude to execute
-        return f'export {var_name}="{secret.value}"'
-    except Exception as e:
-        return f"ERROR: Secret '{name}' not found."
+    return vault_set_env(name, env_var=env_var, vault_client=vault_client)
 
 
 # --- ASGI app: FastMCP HTTP app + auth middleware ---

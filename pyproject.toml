@@ -1,0 +1,16 @@
+[project]
+name = "vault-bridge"
+version = "1.0.0"
+description = "Azure Key Vault MCP tools"
+requires-python = ">=3.12"
+dependencies = [
+    "azure-identity>=1.17.0",
+    "azure-keyvault-secrets>=4.8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["vault_bridge"]

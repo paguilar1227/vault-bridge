@@ -1,0 +1,17 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  notify-gateway:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger open-toolkit deploy
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GATEWAY_DISPATCH_TOKEN }}
+          repository: paguilar1227/open-toolkit
+          event-type: dependency-updated
+          client-payload: '{"package": "vault-bridge", "tag": "${{ github.ref_name }}"}'
