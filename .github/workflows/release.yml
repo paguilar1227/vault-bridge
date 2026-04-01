@@ -7,6 +7,9 @@ on:
       - "**.md"
       - "LICENSE"
 
+permissions:
+  contents: write
+
 jobs:
   tag-and-notify:
     runs-on: ubuntu-latest
